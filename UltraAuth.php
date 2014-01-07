@@ -16,7 +16,7 @@ class UltraAuth
 	{
 		try
 		{
-			$db = new PDO($db_type . ':' . $db_path);
+			$this->db = new PDO($db_type . ':' . $db_path);
 			return true;
 		}
 		catch(PDOException $e)
@@ -28,6 +28,11 @@ class UltraAuth
 			$this->messages[] = "General errors: " . $e->getMessage();
 		}
 		return false;
+	}
+	
+	private function closeDatabaseConnection()
+	{
+		$this->db = null;
 	}
 	
 	public function checkAuthentication()
@@ -55,6 +60,7 @@ class UltraAuth
 		{
 			if(isUniqueUsername($username) && isUniqueEmail($email))
 			{
+				$this->createDatabaseConnection();
 				$salt = md5(time() . $username . $email);
 				$hashed_password = $this->generateHashedPassword($password, $salt);
 				
@@ -69,6 +75,7 @@ class UltraAuth
 				
 				$result = $stmt->execute();
 				
+				$this->closeDatabaseConnection();
 				if($result)
 				{
 					$this->messages[] = "User registered successfully";
@@ -93,6 +100,7 @@ class UltraAuth
 	
 	public function logIn($username, $password)
 	{
+		$this->createDatabaseConnection();
 		$query = "SELECT username, password, salt
 			FROM users
 			WHERE username = :username";
@@ -100,6 +108,7 @@ class UltraAuth
 		$stmt->execute(array(":username" => $username));
 		
 		$result = $stmt->fetch();
+		$this->closeDatabaseConnection();
 		if($result)
 		{
 			if(checkHashedPassword($password, $result['salt'], $result['password']))
@@ -139,6 +148,7 @@ class UltraAuth
 	
 	private function isUniqueUsername($username)
 	{
+		$this->createDatabaseConnection();
 		$query = "SELECT username
 			FROM users
 			WHERE username = :username";
@@ -146,7 +156,7 @@ class UltraAuth
 		$stmt->execute(array(":username" => $username));
 		
 		$result = $stmt->fetch();
-		
+		$this->closeDatabaseConnection();
 		if($result)
 		{
 			$this->messages[] = "Username is already associated with another account";
@@ -160,6 +170,7 @@ class UltraAuth
 	
 	private function isUniqueEmail($email)
 	{
+		$this->createDatabaseConnection();
 		$query = "SELECT email
 			FROM users
 			WHERE email = :email";
@@ -167,7 +178,7 @@ class UltraAuth
 		$stmt->execute(array(":email" => $email));
 		
 		$result = $stmt->fetch();
-		
+		$this->closeDatabaseConnection();
 		if($result)
 		{
 			$this->messages[] = "Email address is already associated with another account";
